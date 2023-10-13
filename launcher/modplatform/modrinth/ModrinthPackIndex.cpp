@@ -27,6 +27,11 @@
 static ModrinthAPI api;
 static ModPlatform::ProviderCapabilities ProviderCaps;
 
+bool shouldDownloadOnSide(QString side)
+{
+    return side == "required" || side == "optional";
+}
+
 // https://docs.modrinth.com/api-spec/#tag/projects/operation/getProject
 void Modrinth::loadIndexedPack(ModPlatform::IndexedPack& pack, QJsonObject& obj)
 {
@@ -52,6 +57,17 @@ void Modrinth::loadIndexedPack(ModPlatform::IndexedPack& pack, QJsonObject& obj)
     modAuthor.name = Json::ensureString(obj, "author", QObject::tr("No author(s)"));
     modAuthor.url = api.getAuthorURL(modAuthor.name);
     pack.authors.append(modAuthor);
+
+    auto client = shouldDownloadOnSide(Json::ensureString(obj, "client_side"));
+    auto server = shouldDownloadOnSide(Json::ensureString(obj, "server_side"));
+
+    if (server && client) {
+        pack.side = "both";
+    } else if (server) {
+        pack.side = "server";
+    } else if (client) {
+        pack.side = "client";
+    }
 
     // Modrinth can have more data than what's provided by the basic search :)
     pack.extraDataLoaded = false;
@@ -109,9 +125,8 @@ void Modrinth::loadIndexedPackVersions(ModPlatform::IndexedPack& pack, QJsonArra
             unsortedVersions.append(file);
     }
     auto orderSortPredicate = [](const ModPlatform::IndexedVersion& a, const ModPlatform::IndexedVersion& b) -> bool {
-        bool a_better_release = a.version_type <= b.version_type;
         // dates are in RFC 3339 format
-        return a.date > b.date && a_better_release;
+        return a.date > b.date;
     };
     std::sort(unsortedVersions.begin(), unsortedVersions.end(), orderSortPredicate);
     pack.versions = unsortedVersions;
