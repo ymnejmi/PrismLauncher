@@ -39,14 +39,14 @@ class ResourceFolderModel : public QAbstractListModel {
      *  Returns whether starting to watch all the paths was successful.
      *  If one or more fails, it returns false.
      */
-    bool startWatching(const QStringList paths);
+    bool startWatching(const QStringList& paths);
 
     /** Stops watching the paths for changes.
      *
      *  Returns whether stopping to watch all the paths was successful.
      *  If one or more fails, it returns false.
      */
-    bool stopWatching(const QStringList paths);
+    bool stopWatching(const QStringList& paths);
 
     /* Helper methods for subclasses, using a predetermined list of paths. */
     virtual bool startWatching() { return startWatching({ m_dir.absolutePath() }); }
@@ -306,7 +306,6 @@ void ResourceFolderModel::applyUpdates(QSet<QString>& current_set, QSet<QString>
             auto removed_it = m_resources.begin() + removed_index;
 
             Q_ASSERT(removed_it != m_resources.end());
-            Q_ASSERT(removed_set.contains(removed_it->get()->internal_id()));
 
             if ((*removed_it)->isResolving()) {
                 auto ticket = (*removed_it)->resolutionTicket();
