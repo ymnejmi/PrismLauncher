@@ -57,7 +57,6 @@
 #include "BuildConfig.h"
 #include "JavaCommon.h"
 #include "launch/steps/TextPrint.h"
-#include "minecraft/auth/AccountTask.h"
 #include "tasks/Task.h"
 
 LaunchController::LaunchController(QObject* parent) : Task(parent) {}
@@ -316,7 +315,7 @@ void LaunchController::launchInstance()
         online_mode = "online";
 
         // Prepend Server Status
-        QStringList servers = { "authserver.mojang.com", "session.minecraft.net", "textures.minecraft.net", "api.mojang.com" };
+        QStringList servers = { "login.microsoftonline.com", "session.minecraft.net", "textures.minecraft.net", "api.mojang.com" };
         QString resolved_servers = "";
         QHostInfo host_info;
 

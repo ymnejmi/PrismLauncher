@@ -240,6 +240,7 @@ class create_link : public QObject {
     bool operator()(bool dryRun = false) { return operator()(QString(), dryRun); }
 
     int totalLinked() { return m_linked; }
+    int totalToLink() { return static_cast<int>(m_links_to_make.size()); }
 
     void runPrivileged() { runPrivileged(QString()); }
     void runPrivileged(const QString& offset);
@@ -342,6 +343,8 @@ QString NormalizePath(QString path);
 
 QString RemoveInvalidFilenameChars(QString string, QChar replaceWith = '-');
 
+QString RemoveInvalidPathChars(QString string, QChar replaceWith = '-');
+
 QString DirNameFromString(QString string, QString inDir = ".");
 
 /// Checks if the a given Path contains "!"
@@ -376,6 +379,7 @@ enum class FilesystemType {
     HFSX,
     FUSEBLK,
     F2FS,
+    BCACHEFS,
     UNKNOWN
 };
 
@@ -404,6 +408,7 @@ static const QMap<FilesystemType, QStringList> s_filesystem_type_names = { { Fil
                                                                            { FilesystemType::HFSX, { "HFSX" } },
                                                                            { FilesystemType::FUSEBLK, { "FUSEBLK" } },
                                                                            { FilesystemType::F2FS, { "F2FS" } },
+                                                                           { FilesystemType::BCACHEFS, { "BCACHEFS" } },
                                                                            { FilesystemType::UNKNOWN, { "UNKNOWN" } } };
 
 /**
@@ -456,7 +461,7 @@ QString nearestExistentAncestor(const QString& path);
 FilesystemInfo statFS(const QString& path);
 
 static const QList<FilesystemType> s_clone_filesystems = { FilesystemType::BTRFS, FilesystemType::APFS, FilesystemType::ZFS,
-                                                           FilesystemType::XFS, FilesystemType::REFS };
+                                                           FilesystemType::XFS,   FilesystemType::REFS, FilesystemType::BCACHEFS };
 
 /**
  * @brief if the Filesystem is reflink/clone capable
@@ -550,5 +555,9 @@ bool canLinkOnFS(FilesystemType type);
 bool canLink(const QString& src, const QString& dst);
 
 uintmax_t hardLinkCount(const QString& path);
+
+#ifdef Q_OS_WIN
+QString getPathNameInLocal8bit(const QString& file);
+#endif
 
 }  // namespace FS

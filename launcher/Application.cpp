@@ -48,6 +48,7 @@
 #include "pathmatcher/MultiMatcher.h"
 #include "pathmatcher/SimplePrefixMatcher.h"
 #include "settings/INIFile.h"
+#include "tools/GenericProfiler.h"
 #include "ui/InstanceWindow.h"
 #include "ui/MainWindow.h"
 
@@ -225,6 +226,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
     // Don't quit on hiding the last window
     this->setQuitOnLastWindowClosed(false);
+    this->setQuitLockEnabled(false);
 
     // Commandline parsing
     QCommandLineParser parser;
@@ -393,20 +395,15 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     {
         static const QString baseLogFile = BuildConfig.LAUNCHER_NAME + "-%0.log";
         static const QString logBase = FS::PathCombine("logs", baseLogFile);
-        auto moveFile = [](const QString& oldName, const QString& newName) {
-            QFile::remove(newName);
-            QFile::copy(oldName, newName);
-            QFile::remove(oldName);
-        };
         if (FS::ensureFolderPathExists("logs")) {  // if this did not fail
             for (auto i = 0; i <= 4; i++)
                 if (auto oldName = baseLogFile.arg(i);
                     QFile::exists(oldName))  // do not pointlessly delete new files if the old ones are not there
-                    moveFile(oldName, logBase.arg(i));
+                    FS::move(oldName, logBase.arg(i));
         }
 
         for (auto i = 4; i > 0; i--)
-            moveFile(logBase.arg(i - 1), logBase.arg(i));
+            FS::move(logBase.arg(i - 1), logBase.arg(i));
 
         logFile = std::unique_ptr<QFile>(new QFile(logBase.arg(0)));
         if (!logFile->open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate)) {
@@ -591,6 +588,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("IconsDir", "icons");
         m_settings->registerSetting("DownloadsDir", QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
         m_settings->registerSetting("DownloadsDirWatchRecursive", false);
+        m_settings->registerSetting("SkinsDir", "skins");
 
         // Editors
         m_settings->registerSetting("JsonEditor", QString());
@@ -878,6 +876,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     // FIXME: what to do with these?
     m_profilers.insert("jprofiler", std::shared_ptr<BaseProfilerFactory>(new JProfilerFactory()));
     m_profilers.insert("jvisualvm", std::shared_ptr<BaseProfilerFactory>(new JVisualVMFactory()));
+    m_profilers.insert("generic", std::shared_ptr<BaseProfilerFactory>(new GenericProfilerFactory()));
     for (auto profiler : m_profilers.values()) {
         profiler->registerSettings(m_settings);
     }
@@ -1206,6 +1205,12 @@ void Application::performMainStartupAction()
         m_updater.reset(new PrismExternalUpdater(m_mainWindow, m_rootPath, m_dataPath));
 #endif
         qDebug() << "<> Updater started.";
+    }
+
+    {  // delete instances tmp dirctory
+        auto instDir = m_settings->get("InstanceDir").toString();
+        const QString tempRoot = FS::PathCombine(instDir, ".tmp");
+        FS::deletePath(tempRoot);
     }
 
     if (!m_urlsToImport.isEmpty()) {
